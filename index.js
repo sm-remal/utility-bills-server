@@ -81,7 +81,7 @@ async function run() {
 
 
     //===================================================================
-    
+
     // Post Payment-Bills
     app.post("/pay-bill", async (req, res) => {
       const paymentData = req.body;
@@ -89,6 +89,41 @@ async function run() {
       res.send(result);
     });
 
+    // Get data from Database
+    app.get("/my-pay-bills", async (req, res) => {
+      const email = req.query.email;
+      const query = { email };
+      const result = await paymentsCollection.find(query).toArray();
+      res.send(result);
+    });
+
+
+    // Update a specific paid bill 
+    app.put("/my-pay-bills/:id", async (req, res) => {
+      const id = req.params.id;
+      const updatedData = req.body;
+      const filter = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          amount: updatedData.amount,
+          address: updatedData.address,
+          phone: updatedData.phone,
+          date: updatedData.date,
+        },
+      };
+      const result = await paymentsCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    });
+
+
+    // Delete a specific paid bill 
+    app.delete("/my-pay-bills/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await paymentsCollection.deleteOne(query);
+      res.send(result);
+    });
+    
 
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
