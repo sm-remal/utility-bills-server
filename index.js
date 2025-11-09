@@ -1,12 +1,14 @@
 const express = require('express');
 const cors = require('cors');
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config()
-
-
 const app = express();
 const port = process.env.PORT || 3000;
 
+
+
+app.use(cors());            
+app.use(express.json()); 
 
 // Root route for testing server
 app.get("/", (req, res) => {
@@ -26,12 +28,47 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     await client.connect();
+
+    // Define Database and Collections
+        const Database = client.db("utility-pay");
+        const payBillsCollection = Database.collection("bills");
+
+        // Get: All Bills
+        app.get("/bills", async (req, res) => {
+            const query = {}
+            const cursor = payBillsCollection.find(query);
+            const result = await cursor.toArray();
+            res.send(result);
+        })
+
+        // GET: Get latest 6 Bills (sorted by date)
+        app.get("/latest-bills", async (req, res) => {
+            const cursor = payBillsCollection.find().sort({ date: -1 }).limit(6);
+            const result = await cursor.toArray();
+            res.send(result);
+        });
+
+
+         // GET: Get a specific product by ID
+        app.get("/bills/:id", async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) }; 
+            const result = await payBillsCollection.findOne(query);
+            res.send(result);
+        });
+
+         // POST: Add a new product
+        app.post("/bills", async (req, res) => {
+            const newBills = req.body;
+            const result = await payBillsCollection.insertOne(newBills);
+            res.send(result);
+        });
    
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
     
-    await client.close();
+    // await client.close();
   }
 }
 run().catch(console.dir);
@@ -40,7 +77,3 @@ run().catch(console.dir);
 app.listen(port, () => {
     console.log(`Utility Pay Server at port: ${port}`)
 });
-
-
-// pass: lH9ElaUwEMWMSoAT
-// user: utilityPay
