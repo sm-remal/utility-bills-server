@@ -32,6 +32,7 @@ async function run() {
     // Define Database and Collections
     const Database = client.db("utility-pay");
     const payBillsCollection = Database.collection("bills");
+    const paymentsCollection = Database.collection("payments")
 
     // Get: All Bills
     // app.get("/bills", async (req, res) => {
@@ -49,7 +50,7 @@ async function run() {
     });
 
 
-    // GET: Get a specific product by ID
+    // GET: Get a specific ID
     app.get("/bills/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
@@ -71,12 +72,23 @@ async function run() {
     });
 
 
-    // POST: Add a new product
+    // POST: Add a new Bills
     app.post("/bills", async (req, res) => {
       const newBills = req.body;
       const result = await payBillsCollection.insertOne(newBills);
       res.send(result);
     });
+
+
+    //===================================================================
+    
+    // Post Payment-Bills
+    app.post("/pay-bill", async (req, res) => {
+      const paymentData = req.body;
+      const result = await paymentsCollection.insertOne(paymentData);
+      res.send(result);
+    });
+
 
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
