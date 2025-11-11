@@ -1,14 +1,51 @@
 const express = require('express');
 const cors = require('cors');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
-require('dotenv').config()
+require('dotenv').config();
+const admin = require("firebase-admin");
 const app = express();
 const port = process.env.PORT || 3000;
+
+
+const serviceAccount = require("./utility-bills-firebase-adminsdk.json");
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
 
 
 
 app.use(cors());
 app.use(express.json());
+
+
+
+const logger = (req, res, next) => {     // Verify Token
+  console.log("logger information")
+  next();
+}
+
+const verifyFirebaseToken = async (req, res, next) => {
+  // console.log("Firebase-Token: ", req.headers.authorization);
+  if (!req.headers.authorization) {
+    return res.status(401).send({ message: "unauthorized access" })
+  }
+  const token = req.headers.authorization.split(" ")[1];
+  if (!token) {
+    return res.status(401).send({ message: "unauthorized access" })
+  }
+  try {
+    const userInfo = await admin.auth().verifyIdToken(token);
+    req.token_email = userInfo.email;
+    console.log("userInfo: ", userInfo)
+    next();
+  }
+  catch {
+    return res.status(401).send({ message: 'unauthorized access' })
+  }
+}
+
+
+
 
 // Root route for testing server
 app.get("/", (req, res) => {
@@ -34,13 +71,6 @@ async function run() {
     const payBillsCollection = Database.collection("bills");
     const paymentsCollection = Database.collection("payments")
 
-    // Get: All Bills
-    // app.get("/bills", async (req, res) => {
-    //   const query = {}
-    //   const cursor = payBillsCollection.find(query);
-    //   const result = await cursor.toArray();
-    //   res.send(result);
-    // })
 
     // GET: Get latest 6 Bills (sorted by date)
     app.get("/latest-bills", async (req, res) => {
@@ -51,7 +81,7 @@ async function run() {
 
 
     // GET: Get a specific ID
-    app.get("/bills/:id", async (req, res) => {
+    app.get("/bills/:id", verifyFirebaseToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await payBillsCollection.findOne(query);
@@ -89,17 +119,30 @@ async function run() {
       res.send(result);
     });
 
-    // Get data from Database
-    app.get("/my-pay-bills", async (req, res) => {
+    // Get data from Database for My Pay Bills
+    // app.get("/my-pay-bills", verifyFirebaseToken, async (req, res) => {
+    //   const email = req.query.email;
+    //   const query = { email };
+    //   const result = await paymentsCollection.find(query).toArray();
+    //   res.send(result);
+    // });
+
+    app.get("/my-pay-bills", verifyFirebaseToken, async (req, res) => {
       const email = req.query.email;
-      const query = { email };
+      const query = {};
+      if (email) {
+        query.email = email;
+        if (email !== req.token_email) {
+          return res.status(403).send({ message: "forbidden access" })
+        }
+      }
       const result = await paymentsCollection.find(query).toArray();
       res.send(result);
     });
 
 
     // Update a specific paid bill 
-    app.put("/my-pay-bills/:id", async (req, res) => {
+    app.put("/my-pay-bills/:id", verifyFirebaseToken, async (req, res) => {
       const id = req.params.id;
       const updatedData = req.body;
       const filter = { _id: new ObjectId(id) };
@@ -117,13 +160,13 @@ async function run() {
 
 
     // Delete a specific paid bill 
-    app.delete("/my-pay-bills/:id", async (req, res) => {
+    app.delete("/my-pay-bills/:id", verifyFirebaseToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await paymentsCollection.deleteOne(query);
       res.send(result);
     });
-    
+
 
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
