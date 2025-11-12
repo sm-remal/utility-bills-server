@@ -13,16 +13,9 @@ admin.initializeApp({
 });
 
 
-
 app.use(cors());
 app.use(express.json());
 
-
-
-const logger = (req, res, next) => {     // Verify Token
-  console.log("logger information")
-  next();
-}
 
 const verifyFirebaseToken = async (req, res, next) => {
   // console.log("Firebase-Token: ", req.headers.authorization);
@@ -45,8 +38,6 @@ const verifyFirebaseToken = async (req, res, next) => {
 }
 
 
-
-
 // Root route for testing server
 app.get("/", (req, res) => {
   res.send("Utility Pay Server is running");
@@ -64,7 +55,7 @@ const client = new MongoClient(uri, {
 });
 async function run() {
   try {
-    await client.connect();
+    // await client.connect();
 
     // Define Database and Collections
     const Database = client.db("utility-pay");
@@ -102,30 +93,23 @@ async function run() {
     });
 
 
-    // POST: Add a new Bills
-    app.post("/bills", async (req, res) => {
-      const newBills = req.body;
-      const result = await payBillsCollection.insertOne(newBills);
-      res.send(result);
-    });
+    // // POST: Add a new Bills
+    // app.post("/bills", async (req, res) => {
+    //   const newBills = req.body;
+    //   const result = await payBillsCollection.insertOne(newBills);
+    //   res.send(result);
+    // });
 
 
     //===================================================================
 
     // Post Payment-Bills
-    app.post("/pay-bill", async (req, res) => {
+    app.post("/pay-bill", verifyFirebaseToken, async (req, res) => {
       const paymentData = req.body;
       const result = await paymentsCollection.insertOne(paymentData);
       res.send(result);
     });
 
-    // Get data from Database for My Pay Bills
-    // app.get("/my-pay-bills", verifyFirebaseToken, async (req, res) => {
-    //   const email = req.query.email;
-    //   const query = { email };
-    //   const result = await paymentsCollection.find(query).toArray();
-    //   res.send(result);
-    // });
 
     app.get("/my-pay-bills", verifyFirebaseToken, async (req, res) => {
       const email = req.query.email;
@@ -168,7 +152,7 @@ async function run() {
     });
 
 
-    await client.db("admin").command({ ping: 1 });
+    // await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
 
