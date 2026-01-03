@@ -70,14 +70,14 @@ async function run() {
 
     // GET: Get latest 6 Bills (sorted by date)
     app.get("/latest-bills", async (req, res) => {
-      const cursor = payBillsCollection.find().sort({ date: -1 }).limit(6);
+      const cursor = payBillsCollection.find().sort({ date: -1 }).limit(8);
       const result = await cursor.toArray();
       res.send(result);
     });
 
 
     // GET: Get a specific ID
-    app.get("/bills/:id", verifyFirebaseToken, async (req, res) => {
+    app.get("/bills/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await payBillsCollection.findOne(query);
@@ -96,15 +96,6 @@ async function run() {
       const result = await payBillsCollection.find(query).toArray();
       res.send(result);
     });
-
-
-    // // POST: Add a new Bills
-    // app.post("/bills", async (req, res) => {
-    //   const newBills = req.body;
-    //   const result = await payBillsCollection.insertOne(newBills);
-    //   res.send(result);
-    // });
-
 
     //===================================================================
 
